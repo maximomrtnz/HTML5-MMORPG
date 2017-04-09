@@ -1,21 +1,43 @@
+<div id="gameDiv">
+    <canvas id="ctx" width="500" height="500" style="border:1px solid #000000;"></canvas>
+ </div>
+ 
+<script src="https://cdn.socket.io/socket.io-1.4.5.js"></script>
+<script src="js/lib/class.js"></script>
+<script src="js/lib/astar.js"></script>
+<script src="js/game.js"></script>
+<script src="js/soundmanager.js"></script>
+<script src="js/assetmanager.js"></script>
+<script src="js/map.js"></script>
+<script src="js/sprite.js"></script>
+<script src="js/entity.js"></script>
+<script src="js/player.js"></script>
 
-<canvas id="ctx" width="500" height="500" style="border:1px solid #000;"></canvas>
+<script>
+                
+    // A cross-browser requestAnimationFrame
+    // See https://hacks.mozilla.org/2011/08/animating-with-javascript-from-setinterval-to-requestanimationframe/
+    var requestAnimFrame = (function(){
+        return window.requestAnimationFrame    ||
+            window.webkitRequestAnimationFrame ||
+            window.mozRequestAnimationFrame    ||
+            window.oRequestAnimationFrame      ||
+            window.msRequestAnimationFrame     ||
+            function(callback){
+                window.setTimeout(callback, 1000 / 60);
+            };
+    })();
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/1.4.5/socket.io.js"></script>
 
-<script type="text/javascript">
-	
-	var ctx = document.getElementById('ctx').getContext('2d');
-	ctx.fonts = '30px Arial';
+    // Init Sound Manager
+    var soundmanager = new SoundManager();
 
-	var socket = io();
+    // Init asset manager
+    var assetManager = new AssetManager();
 
-	socket.on('newPositions',function (data) {
-		ctx.clearRect(0,0,500,500);
-		for(var i = 0; i < data.length; i++){
-			ctx.fillText(data[i].number,data[i].x,data[i].y);
-		}
-	});
-
+    window.onload = function(e){ 
+        // Init Game
+        new Game().init();
+    }
 
 </script>
