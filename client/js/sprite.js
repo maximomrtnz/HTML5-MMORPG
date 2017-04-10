@@ -11,7 +11,7 @@ var Sprite = Class.extend({
         this.numberOfFrames = numberOfFrames;
 	},
 
-	render : function (x,y) {
+	render : function () {
 		
 		var row = Math.floor(this.frameIndex / this.numberOfFrames);
       	var col = Math.floor(this.frameIndex % this.numberOfFrames);
@@ -22,13 +22,16 @@ var Sprite = Class.extend({
          col * this.frameWidth, row * this.frameHeight,
          this.frameWidth, 
          this.frameHeight,
-         x, 
-         y,
+         this.x, 
+         this.y,
          this.frameWidth, 
          this.frameHeight);
     },
 
-    update : function () {
+    update : function (x,y) {
+
+        this.x = x;
+        this.y = y;
 
         this.tickCount += 1;
 			

@@ -1,33 +1,21 @@
 var Player = Entity.extend({
 
-	move : function () {
-		if(this.move_callback){
-			this.move_callback();
-		}
+	init : function(x,y,sprite,speed){
+		this._super(x,y,sprite,speed);
+	},
+
+	move : function (x,y) {
+		this.x += x;
+		this.y += y;
+		this.sprite.update(this.x,this.y);
 	},
 
 	attack : function(){
 
 	},
 
-	onMove : function(callback){
-		this.move_callback = callback;
-	},
-
-	getAStarMovement: function(){
-		var map = this.getWalkableMap(),
-		path;
-		map[Math.floor(this.position.y)][Math.floor(this.position.x)] = 's';
-		map[Math.floor(this.targetAgent.position.y)][Math.floor(this.targetAgent.position.x)] = 'g';
-
-		path = astar(map,'manhattan',true);
-		if(path && path.length>1){
-			return {
-				x: path[1].col,
-				y: path[1].row
-			};
-		}
-		return this.position;
+	render : function(){
+		this.sprite.render();
 	}
 
 });

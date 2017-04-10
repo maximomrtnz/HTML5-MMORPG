@@ -1,241 +1,248 @@
-/**
-* AStarFloodFill
-* Fork of Matthew Trost's A-Star Pathfinding Algorithm by D Neame @cham
-* Adds delayed flood filling support
-*
-* @license Creative Commons Attribution-ShareAlike 3.0 Unported License
-* @datepublished December 2010
-*/
+// world is a 2d array of integers (eg world[10][15] = 0)
+// pathStart and pathEnd are arrays like [5,10]
+function findPath(map, collisions, pathStart, pathEnd){
+	// shortcuts for speed
+	var	abs = Math.abs;
+	var	max = Math.max;
+	var	pow = Math.pow;
+	var	sqrt = Math.sqrt;
 
+	// the world data are integers:
+	// anything higher than this number is considered blocked
+	// this is handy is you use numbered sprites, more than one
+	// of which is walkable road, grass, mud, etc
+	var maxWalkableTileNum = 0;
 
-/**
+	// keep track of the world dimensions
+    // Note that this A-star implementation expects the world array to be square: 
+	// it must have equal height and width. If your game world is rectangular, 
+	// just fill the array with dummy values to pad the empty space.
+	var worldWidth = map.width;
+	var worldHeight = map.width;
+	var worldSize =	worldWidth * worldHeight;
 
-map format 2D Array:
-	u = unwalkable, w = walkable, s = start , g = goal
-	if map is not sane (no u,w,s and g) then does not fail gracefully
-	map format e.g.: 
-	[ ["u", "u", "u", "u", "u"],  
-	["w", "w", "w", "w", "g"],  
-	["w", "w", "u", "w", "w"],  
-	["s", "w", "u", "w", "w"],  
-	["u", "u", "u", "w", "w"] ]
-
-
-Following are set in the returned object:
-
-heuristic
-	"manhattan" – the speedy Manhattan method, which adds up the x and y distance
-	"diagonal" – uses a diagonal line, plus any remaining x/y distance
-	"euclidean" – The familiar, elementary distance formula, accurate but slow
-
-cutCorners
-	The cutCorners parameter, which accepts a Boolean argument, specifies whether the path can include any diagonal steps – including steps between two unwalkable nodes situated diagonally:
-	true – corners may be cut (i.e., diagonal movement is allowed)
-	false – corners may not be cut
-
-**/
-define(function(){
-	'use strict';
+	// which heuristic should we use?
+	// default: no diagonals (Manhattan)
+	var distanceFunction = ManhattanDistance;
+	var findNeighbours = function(){}; // empty
 
 	/*
-	 * original astar source
-	 */
-	function astar (map, heuristic, cutCorners) {
-		var listOpen = [];
-		var listClosed = [];
-		var listPath = [];
-		var nodeGoal = createTerminalNode(map, heuristic, "g", null);
-		var nodeStart = createTerminalNode(map, heuristic, "s", nodeGoal);
-		addNodeToList(nodeStart, listOpen);
 
-		var n;
-		while (!isListEmpty(listOpen)) {
-			n = returnNodeWithLowestFScore(listOpen);
-			addNodeToList(n, listClosed);
-			removeNodeFromList(n, listOpen);
-			if (areNodesEqual(n, nodeGoal)) {
-				pathTo(n, listPath);
-				listPath.reverse();
-				return listPath;
-			}
-			n.makeChildNodes(map, heuristic, cutCorners, nodeGoal);
-			cullUnwantedNodes(n.childNodes, listOpen);
-			cullUnwantedNodes(n.childNodes, listClosed);
-			removeMatchingNodes(n.childNodes, listOpen);
-			removeMatchingNodes(n.childNodes, listClosed);
-			addListToList(n.childNodes, listOpen);
+	// alternate heuristics, depending on your game:
+
+	// diagonals allowed but no sqeezing through cracks:
+	var distanceFunction = DiagonalDistance;
+	var findNeighbours = DiagonalNeighbours;
+
+	// diagonals and squeezing through cracks allowed:
+	var distanceFunction = DiagonalDistance;
+	var findNeighbours = DiagonalNeighboursFree;
+
+	// euclidean but no squeezing through cracks:
+	var distanceFunction = EuclideanDistance;
+	var findNeighbours = DiagonalNeighbours;
+
+	// euclidean and squeezing through cracks allowed:
+	var distanceFunction = EuclideanDistance;
+	var findNeighbours = DiagonalNeighboursFree;
+
+	*/
+
+	// distanceFunction functions
+	// these return how far away a point is to another
+
+	function ManhattanDistance(Point, Goal){	// linear movement - no diagonals - just cardinal directions (NSEW)
+		return abs(Point.x - Goal.x) + abs(Point.y - Goal.y);
+	}
+
+	function DiagonalDistance(Point, Goal){	// diagonal movement - assumes diag dist is 1, same as cardinals
+		return max(abs(Point.x - Goal.x), abs(Point.y - Goal.y));
+	}
+
+	function EuclideanDistance(Point, Goal){	// diagonals are considered a little farther than cardinal directions
+		// diagonal movement using Euclide (AC = sqrt(AB^2 + BC^2))
+		// where AB = x2 - x1 and BC = y2 - y1 and AC will be [x3, y3]
+		return sqrt(pow(Point.x - Goal.x, 2) + pow(Point.y - Goal.y, 2));
+	}
+
+	// Neighbours functions, used by findNeighbours function
+	// to locate adjacent available cells that aren't blocked
+
+	// Returns every available North, South, East or West
+	// cell that is empty. No diagonals,
+	// unless distanceFunction function is not Manhattan
+	function Neighbours(x, y){
+		var	N = y - 1,
+		S = y + 1,
+		E = x + 1,
+		W = x - 1,
+		myN = N > -1 && canWalkHere(x, N),
+		myS = S < worldHeight && canWalkHere(x, S),
+		myE = E < worldWidth && canWalkHere(E, y),
+		myW = W > -1 && canWalkHere(W, y),
+		result = [];
+		if(myN)
+		result.push({x:x, y:N});
+		if(myE)
+		result.push({x:E, y:y});
+		if(myS)
+		result.push({x:x, y:S});
+		if(myW)
+		result.push({x:W, y:y});
+		findNeighbours(myN, myS, myE, myW, N, S, E, W, result);
+		return result;
+	}
+
+	// returns every available North East, South East,
+	// South West or North West cell - no squeezing through
+	// "cracks" between two diagonals
+	function DiagonalNeighbours(myN, myS, myE, myW, N, S, E, W, result){
+		if(myN){
+			if(myE && canWalkHere(E, N))
+			result.push({x:E, y:N});
+			if(myW && canWalkHere(W, N))
+			result.push({x:W, y:N});
 		}
-		return null;
-	}
-
-	function pathTo (n, listPath) {
-		listPath.push(new NodeCoordinate(n.row, n.col));
-		if (n.parentNode == null)
-			return;
-		pathTo(n.parentNode, listPath);
-	}
-
-	function addListToList(listA, listB) {
-		var x;
-		for (x in listA)
-			listB.push(listA[x]);
-	}
-
-	function removeMatchingNodes (listToCheck, listToClean) {
-		var listToCheckLength = listToCheck.length;
-		for (var i = 0; i < listToCheckLength; i++) {
-			for (var j = 0; j < listToClean.length; j++) {
-				if (listToClean[j].row == listToCheck[i].row && listToClean[j].col == listToCheck[i].col)
-					listToClean.splice(j, 1);
-			}
+		if(myS){
+			if(myE && canWalkHere(E, S))
+			result.push({x:E, y:S});
+			if(myW && canWalkHere(W, S))
+			result.push({x:W, y:S});
 		}
 	}
 
-	function cullUnwantedNodes (listToCull, listToCompare) {
-		var listToCompareLength = listToCompare.length;
-		for (var i = 0; i < listToCompareLength; i++) {
-			for (var j = 0; j < listToCull.length; j++) {
-				if (listToCull[j].row == listToCompare[i].row && listToCull[j].col == listToCompare[i].col) {
-					if (listToCull[j].f >= listToCompare[i].f)
-						listToCull.splice(j, 1);
+	// returns every available North East, South East,
+	// South West or North West cell including the times that
+	// you would be squeezing through a "crack"
+	function DiagonalNeighboursFree(myN, myS, myE, myW, N, S, E, W, result){
+		myN = N > -1;
+		myS = S < worldHeight;
+		myE = E < worldWidth;
+		myW = W > -1;
+		if(myE)
+		{
+			if(myN && canWalkHere(E, N))
+			result.push({x:E, y:N});
+			if(myS && canWalkHere(E, S))
+			result.push({x:E, y:S});
+		}
+		if(myW)
+		{
+			if(myN && canWalkHere(W, N))
+			result.push({x:W, y:N});
+			if(myS && canWalkHere(W, S))
+			result.push({x:W, y:S});
+		}
+	}
+
+	// returns boolean value (world cell is available and open)
+	function canWalkHere(x, y){
+		var i = y * map.width + x;
+		return ((collisions[i] != null) &&	(collisions[i] <= maxWalkableTileNum));
+	};
+
+	// Node function, returns a new object with Node properties
+	// Used in the calculatePath function to store route costs, etc.
+	function Node(Parent, Point){
+		var newNode = {
+			// pointer to another Node object
+			Parent:Parent,
+			// array index of this Node in the world linear array
+			value:Point.x + (Point.y * worldWidth),
+			// the location coordinates of this Node
+			x:Point.x,
+			y:Point.y,
+			// the heuristic estimated cost
+			// of an entire path using this node
+			f:0,
+			// the distanceFunction cost to get
+			// from the starting point to this node
+			g:0
+		};
+
+		return newNode;
+	}
+
+	// Path function, executes AStar algorithm operations
+	function calculatePath(){
+		// create Nodes from the Start and End x,y coordinates
+		var	mypathStart = Node(null, {x:pathStart[0], y:pathStart[1]});
+		var mypathEnd = Node(null, {x:pathEnd[0], y:pathEnd[1]});
+		// create an array that will contain all world cells
+		var AStar = new Array(worldSize);
+		// list of currently open Nodes
+		var Open = [mypathStart];
+		// list of closed Nodes
+		var Closed = [];
+		// list of the final output array
+		var result = [];
+		// reference to a Node (that is nearby)
+		var myNeighbours;
+		// reference to a Node (that we are considering now)
+		var myNode;
+		// reference to a Node (that starts a path in question)
+		var myPath;
+		// temp integer variables used in the calculations
+		var length, max, min, i, j;
+		// iterate through the open list until none are left
+		while(length = Open.length)
+		{
+			max = worldSize;
+			min = -1;
+			for(i = 0; i < length; i++)
+			{
+				if(Open[i].f < max)
+				{
+					max = Open[i].f;
+					min = i;
 				}
 			}
-		}
-	}
-
-	function areNodesEqual (nodeA, nodeB) {
-		if (nodeA.row == nodeB.row && nodeA.col == nodeB.col)
-			return true;
-		else
-			return false;
-	}
-
-	function returnNodeWithLowestFScore (list) {
-		var lowestNode = list[0], x;
-		for (x in list)
-			lowestNode = (list[x].f < lowestNode.f) ? list[x] : lowestNode;
-		return lowestNode;
-	}
-
-	function isListEmpty (list) {
-		return (list.length < 1) ? true : false;
-	}
-
-	function removeNodeFromList (node, list) {
-		var listLength = list.length;
-		for (var i = 0; i < listLength; i++) {
-			if (node.row == list[i].row && node.col == list[i].col) {
-				list.splice(i, 1);
-				break;
-			}
-		}
-	}
-
-	function addNodeToList (node, list) {
-		list.push(node);
-	}
-
-	function createTerminalNode (map, heuristic, nodeType, nodeGoal) {
-		var mapRows = map.length;
-		var mapCols = map[0].length;
-		for (var row = 0; row < mapRows; row++) {
-			for (var col = 0; col < mapCols; col++) {
-				if (map[row][col] == nodeType) {
-					return new Node(row, col, map, heuristic, null, nodeGoal);
+			// grab the next node and remove it from Open array
+			myNode = Open.splice(min, 1)[0];
+			// is it the destination node?
+			if(myNode.value === mypathEnd.value)
+			{
+				myPath = Closed[Closed.push(myNode) - 1];
+				do
+				{
+					result.push([myPath.x, myPath.y]);
 				}
+				while (myPath = myPath.Parent);
+				// clear the working arrays
+				AStar = Closed = Open = [];
+				// we want to return start to finish
+				result.reverse();
 			}
-		}
-		return null;
-	}
-
-	function returnHScore (node, heuristic, nodeGoal) {
-		var y = Math.abs(node.row - nodeGoal.row);
-		var x = Math.abs(node.col - nodeGoal.col);
-		switch (heuristic) {
-			case "manhattan":
-				return (y + x) * 10;
-			case "diagonal":
-				return (x > y) ? (y * 14) + 10 * (x - y) : (x * 14) + 10 * (y - x);
-			case "euclidean":
-				return Math.sqrt((x * x) + (y * y));
-			default:
-				return null;
-		}
-	}
-
-	function NodeCoordinate (row, col) {
-		this.row = row;
-		this.col = col;
-	}
-
-	function Node (row, col, map, heuristic, parentNode, nodeGoal) {
-		var mapLength = map.length;
-		var mapRowLength = map[0].length;
-		this.row = row;
-		this.col = col;
-		this.northAmbit = (row == 0) ? 0 : row - 1;
-		this.southAmbit = (row == mapLength - 1) ? mapLength - 1 : row + 1;
-		this.westAmbit = (col == 0) ? 0 : col - 1;
-		this.eastAmbit = (col == mapRowLength - 1) ? mapRowLength - 1 : col + 1;
-		this.parentNode = parentNode;
-		this.childNodes = [];
-
-		if (parentNode != null) {
-			if (row == parentNode.row || col == parentNode.col)
-				this.g = parentNode.g + 10;
-			else
-				this.g = parentNode.g + 14;
-			this.h = returnHScore(this, heuristic, nodeGoal);
-		}
-		else {
-			this.g = 0;
-			if (map[row][col] == "s")
-				this.h = returnHScore(this, heuristic, nodeGoal);
-			else
-				this.h = 0;
-		}
-		this.f = this.g + this.h;
-
-		this.makeChildNodes = function (map, heuristic, cutCorners, nodeGoal) {
-			for (var i = this.northAmbit; i <= this.southAmbit; i++) {
-				for (var j = this.westAmbit; j <= this.eastAmbit; j++) {
-					if (i != this.row || j != this.col) {
-						if (map[i][j] != "u") {
-							if (cutCorners == true) 
-								this.childNodes.push(new Node(i, j, map, heuristic, this, nodeGoal));
-							else {
-								if (i == this.row || j == this.col)
-									this.childNodes.push(new Node(i, j, map, heuristic, this, nodeGoal));	
-							}
-						}
+			else // not the destination
+			{
+				// find which nearby nodes are walkable
+				myNeighbours = Neighbours(myNode.x, myNode.y);
+				// test each one that hasn't been tried already
+				for(i = 0, j = myNeighbours.length; i < j; i++)
+				{
+					myPath = Node(myNode, myNeighbours[i]);
+					if (!AStar[myPath.value])
+					{
+						// estimated cost of this particular route so far
+						myPath.g = myNode.g + distanceFunction(myNeighbours[i], myNode);
+						// estimated cost of entire guessed route to the destination
+						myPath.f = myPath.g + distanceFunction(myNeighbours[i], mypathEnd);
+						// remember this new path for testing above
+						Open.push(myPath);
+						// mark this node in the world graph as visited
+						AStar[myPath.value] = true;
 					}
 				}
+				// remember this route as having no more untested options
+				Closed.push(myNode);
 			}
-		};
+		} // keep iterating until the Open list is empty
+		return result;
 	}
 
-	function spiral(size,outwards){
-		var i, k, j=0,ret=[],
-			pushFn = outwards ?	function(a,b){ a.unshift(b); } :
-								function(a,b){ a.push(b); };
-		for(i = size; i >=0; i--){
-			for(k=j; k < i; k++){
-				pushFn(ret,{x:j,y:k});
-			}
-			for(k=j; k < i; k++) {
-				pushFn(ret,{x:k,y:i});
-			}
-			for(k=i; k > j; k--){
-				pushFn(ret,{x:i,y:k});
-			}
-			for(k=i; k > j; k--){
-				pushFn(ret,{x:k,y:j});
-			}
-			j++;
-		}
-		return ret;
-	}
+	// actually calculate the a-star path!
+	// this returns an array of coordinates
+	// that is empty if no path is possible
+	return calculatePath();
 
-	return astar;
-
-});
+} // end of findPath() function

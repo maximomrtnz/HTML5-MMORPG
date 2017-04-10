@@ -1,9 +1,11 @@
 var Map = Class.extend({
 
-	init : function (context, data) {
+	init : function (context, data, camera) {
 		this.layers = [];
 		this.context = context;
 		this.loadTileset(data);
+		this.camera = camera;
+		this.matrix = [];
 	},
 
 	loadTileset: function(json) {
@@ -28,38 +30,61 @@ var Map = Class.extend({
   	},
 
   	renderLayer: function(layer){
+  		
   		var self = this;
+		
 		if (layer.type !== "tilelayer" || !layer.opacity) { 
 			return; 
 		}
-		var s = this.context.canvas.cloneNode(),
-		size = this.data.tilewidth;
+		
+		var s = this.context.canvas.cloneNode();
+		
+		var tileSize = this.data.tilewidth;
+		
 		s = s.getContext("2d");
-		if (this.layers.length < this.data.layers.length) {
-			layer.data.forEach(function(tile_idx, i) {
-				if (!tile_idx) { 
-					return; 
+
+		
+		var startCol = Math.floor(this.camera.x / tileSize);
+	    var endCol = startCol + (this.camera.width / tileSize);
+	    var startRow = Math.floor(this.camera.y / tileSize);
+	    var endRow = startRow + (this.camera.height / tileSize);
+	    var offsetX = -this.camera.x + startCol * tileSize;
+	    var offsetY = -this.camera.y + startRow * tileSize;
+			
+		// Iterate over layer's tiles
+		for (var col = startCol; col <= endCol; col++) {
+        	
+        	for (var row = startRow; row <= endRow; row++) {
+
+				var tile_idx = layer.data[row * layer.width + col];
+
+				// Draw a tile
+				if (tile_idx == 0) { // Empty tile (0) 
+					continue; 
 				}
-				var img_x, img_y, s_x, s_y,
-				tile = self.data.tilesets[0];
+
+				var img_x, img_y;
+			
+				tile = this.data.tilesets[0];
+				
 				tile_idx--;
-				img_x = (tile_idx % (tile.imagewidth / size)) * size;
-				img_y = ~~(tile_idx / (tile.imagewidth / size)) * size;
-				s_x = (i % layer.width) * size;
-				s_y = ~~(i / layer.width) * size;
-				s.drawImage(self.tileset, img_x, img_y, size, size,
-				      s_x, s_y, size, size);
-				});
-				self.layers.push(s.canvas.toDataURL());
-				self.context.drawImage(s.canvas, 0, 0);
+				
+				img_x = (tile_idx % (tile.imagewidth / tileSize)) * tileSize;
+				
+				img_y = ~~(tile_idx / (tile.imagewidth / tileSize)) * tileSize;
+
+				var x = (col - startCol) * tileSize + offsetX;
+            	
+            	var y = (row - startRow) * tileSize + offsetY;
+
+				// Draw a tile
+				s.drawImage(this.tileset, img_x, img_y, tileSize, tileSize, Math.round(x), Math.round(y), tileSize, tileSize);
+			
+			}
+
 		}
-		else {
-			this.layers.forEach(function(src) {
-				var i = new Image();
-				i.src = src;
-				self.context.drawImage(i, 0, 0);
-			});
-		}
+
+		this.context.drawImage(s.canvas, 0, 0);
   	},
 
   	onLoad : function(callback){
