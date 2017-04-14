@@ -2,10 +2,11 @@ var cls = require('./lib/class');
 
 var Entity = cls.Class.extend({
     
-    init: function (id, x, y) {
-        this.id = id;
+    init: function (x, y, sprite, speed) {
         this.x = x;
         this.y = y;
+        this.sprite = sprite;
+        this.speed = speed;
     },
 
     setPosition : function(x,y){

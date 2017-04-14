@@ -1,0 +1,5 @@
+GameStates = {
+	LOADING : 0,
+	TRANSITIONING: 1,
+	PLAYING : 2
+}

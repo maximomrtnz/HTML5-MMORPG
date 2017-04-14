@@ -1,6 +1,16 @@
 .main-wrapper {
     width: 512px;
-    padding-left: 1em;
-    padding-right: 1em;
     margin: 0 auto;
+    border:1px solid #000000;
+    position: relative;
+}
+
+#background{
+	position: absolute;
+	z-index: 0;
+}
+
+#entities{
+	position: absolute;
+	z-index: 1;
 }

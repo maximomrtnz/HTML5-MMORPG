@@ -9,6 +9,8 @@
         <script src="https://cdn.socket.io/socket.io-1.4.5.js"></script>
         <script src="js/lib/class.js"></script>
         <script src="js/lib/astar.js"></script>
+        <script src="js/utils.js"></script>
+        <script src="js/gamestates.js"></script>
         <script src="js/game.js"></script>
         <script src="js/soundmanager.js"></script>
         <script src="js/assetmanager.js"></script>
@@ -42,7 +44,8 @@
 
         <div class="main-wrapper">
 
-            <canvas id="ctx" width="512" height="512" style="border:1px solid #000000;"></canvas>
+            <canvas id="background" width="512" height="512"></canvas>
+            <canvas id="entities" width="512" height="512"></canvas>
 
         </div><!-- main wrapper -->
 

@@ -4,14 +4,23 @@ var Game = Class.extend({
 		
 		var self = this;
 
-		this.canvas = document.getElementById("ctx");
+		this.canvasBackground = document.getElementById("background");
+		this.canvasEntities = document.getElementById("entities");
 
-		this.canvas.addEventListener('click',this.click.bind(self),false);
 
-		this.context = this.canvas.getContext("2d");
-		this.canvas.scale = 1;
+		this.canvasEntities.addEventListener('click',this.click.bind(self),false);
+
+		this.contextBackground = this.canvasBackground.getContext("2d");
+		this.contextEntities = this.canvasEntities.getContext("2d");
+
 		this._previousElapsed = 0;
 		this.currentPath = [];
+
+		this.drawBackground = true;
+
+		this.transitionTo = null;
+
+		this.currentState = GameStates.LOADING;
 
 		// Adding JSON
 		assetManager.queueDownload('map.json');
@@ -27,55 +36,104 @@ var Game = Class.extend({
 		var self = this;
 
 		// Created a Camera
-		this.camera = new Camera(512, 512, assetManager.getAsset('map.json'), 256);
+		this.camera = new Camera(512, 512, assetManager.getAsset('map.json'), 512);
 
 		// Create Tiled Map
-		this.map = new Map(this.context,assetManager.getAsset('map.json'), this.camera);
+		this.map = new Map(this.contextBackground,assetManager.getAsset('map.json'), this.camera);
 
 		this.map.onLoad(function(){
 			
+			self.currentState = GameStates.PLAYING;
+
 			// Run the Game
 			self.run();
 		
 		})
 
-		this.player = new Player(0,0,new Sprite(this.context,assetManager.getAsset('img/leatherarmor.png'),32,32,5),2);	
+		this.player = new Player(100,100,new Sprite(this.contextEntities,assetManager.getAsset('img/leatherarmor.png'),100,100,32,32,4),2);	
+
+		this.player.onRequestPath(function(x,y){
+
+			// Get Final tile
+			var goal = this.requestTile(x,y);
+
+			// Get Started tile
+			var start = this.requestTile(this.x,this.y);
+
+			return findPath(self.map.data,self.map.data.layers[1].data,start,goal);
+
+		});
+
+		this.player.onRequestTile(function(x,y){
+			
+			var tileSize = self.map.data.tilewidth;
+
+			return [Math.floor(x/tileSize),Math.floor(y/tileSize)];
+
+		});
+
+		this.player.onCheckCollisionWithCameraBorder(function(delta){
+
+			if (this.x + this.sprite.frameWidth >= self.camera.width) {
+				
+				self.currentState = GameStates.TRANSITIONING;	
+				
+				self.transitionTo = {
+					x : this.x,
+					y : self.camera.y
+				}
+
+				this.setPosition(0,this.y);
+
+				return;
+			
+			}
+
+		});
 
 	},
 
 	render: function(){
-		this.map.renderLayers();
+
+		this.contextEntities.clearRect(0,0,this.canvasEntities.width,this.canvasEntities.height);
+
+		if(this.currentState == GameStates.PLAYING){
+
+			if(this.drawBackground){
+				this.map.renderLayers();
+				this.drawBackground = false;
+			}
+
+
+		}else if(this.currentState == GameStates.TRANSITIONING){
+
+			this.map.renderLayers();
+
+		}
+
 		this.player.render();
+
 	},
 
 	update : function(delta){
-
-		this.camera.move(delta,0,0);
 		
-		if(this.pathEnd){
+		// Check game state
+		if(this.currentState == GameStates.PLAYING){
+		
+			this.player.update();
+		
+		}else if(this.currentState == GameStates.TRANSITIONING){
 
-			var currentPath = findPath(this.map.data,this.map.data.layers[1].data,[Math.floor(this.player.x),Math.floor(this.player.y)],this.pathEnd);
-
-			if(currentPath.length > 1){
-			
-				var dx = currentPath[1][0] - this.player.x, dy = currentPath[1][1] - this.player.y, moveX = dx*0.03, moveY = dy*0.03;
-				
-				if(moveX){
-					moveX = Math.abs(moveX)/moveX * Math.max(moveX,0.05);
-				}
-				if(moveY){
-					moveY = Math.abs(moveY)/moveY * Math.max(moveY,0.05);
-				}
-
-				console.log(moveX,moveY);
-
-				this.player.move(moveX,moveY);
-
+			// Move camera to target position
+			if(this.transitionTo.x > this.camera.x || this.transitionTo.y > this.camera.y){
+				this.camera.moveTo(delta,this.transitionTo.x,this.transitionTo.y);
 			}else{
-				this.pathEnd = null;
+				this.currentState = GameStates.PLAYING;
 			}
 
+
 		}
+
 	},
 
 	run : function(elapsed){
@@ -96,32 +154,15 @@ var Game = Class.extend({
 		this.render();
 	},
 
-	click : function(e){
+	click : function(evt){
 	
-		var x;
-		var y;
+		var rect = this.canvasEntities.getBoundingClientRect();
 
-		// grab html page coords
-		if (e.pageX != undefined && e.pageY != undefined){
-			x = e.pageX;
-			y = e.pageY;
-		}else{
-			x = e.clientX + document.body.scrollLeft +
-			document.documentElement.scrollLeft;
-			y = e.clientY + document.body.scrollTop +
-			document.documentElement.scrollTop;
-		}
+		var x = evt.clientX - rect.left;
+		var y = evt.clientY - rect.top;
 
-		// make them relative to the canvas only
-		x -= this.canvas.offsetLeft;
-		y -= this.canvas.offsetTop;
+		this.player.moveTo(x,y);
 
-		var tileSize = this.map.data.tilewidth;
-
-		// return tile x,y that we clicked
-		this.pathEnd = [Math.floor(x/tileSize),Math.floor(y/tileSize)];
-
-		console.log([Math.floor(this.player.x),Math.floor(this.player.y)],this.pathEnd);
 	}
 
 });
