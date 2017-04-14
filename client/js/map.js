@@ -89,6 +89,22 @@ var Map = Class.extend({
 
   	onLoad : function(callback){
   		this.load_callback = callback;
-  	}
+  	},
+
+
+	xy2Tile : function(x,y){
+		var tileSize = this.data.tilewidth;
+		return [Math.floor(x/tileSize),Math.floor(y/tileSize)];
+	},
+
+	xy2GridPosition : function(x,y){
+		var tileSize = this.data.tilewidth;
+		return [Math.floor(x/tileSize)*tileSize,Math.floor(y/tileSize)*tileSize];
+	},
+
+	tile2GridPosition : function(row,col){
+		var tileSize = this.data.tilewidth;
+		return [tileSize*row,tileSize*col];
+	}
 
 });

@@ -58,8 +58,6 @@ var Entity = Class.extend({
 
 				this.sprite.update(this.x,this.y);
 
-				console.log(this.x,this.y,nextPosition[0],nextPosition[1]);
-
 				if(this.x == nextPosition[0] && this.y == nextPosition[1]){
 					this.path.shift();
 				}

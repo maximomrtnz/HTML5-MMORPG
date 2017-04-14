@@ -66,7 +66,7 @@ var Game = Class.extend({
 
 		this.player.onRequestTile(function(x,y){
 			
-			return xy2Tile(x,y,self.map.data.tilewidth);
+			return self.map.xy2Tile(x,y);
 
 		});
 
@@ -90,7 +90,7 @@ var Game = Class.extend({
 		});
 
 		this.player.onRequestGridPositionByTile(function(tile){
-			return tile2GridPosition(tile[0],tile[1],self.map.data.tilewidth);
+			return self.map.tile2GridPosition(tile[0],tile[1]);
 		});
 
 	},
@@ -163,7 +163,7 @@ var Game = Class.extend({
 		var x = evt.clientX - rect.left;
 		var y = evt.clientY - rect.top;
 
-		var gridPosition = xy2GridPosition(x,y,this.map.data.tilewidth);
+		var gridPosition = this.map.xy2GridPosition(x,y);
 
 		this.player.moveTo(gridPosition[0],gridPosition[1]);
 
