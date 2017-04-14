@@ -17,10 +17,12 @@ var Entity = Class.extend({
 
 		}else{
 
-			if(this.x != x && this.y!=y){
+			var start = this.requestTile(this.x,this.y);
 
+			var end = this.requestTile(x,y);
+
+			if(start[0]!=end[0] || start[1]!=end[1]){
 				this.path = this.requestPathfindingTo(x,y);
-
 			}
 
 		}
@@ -33,34 +35,34 @@ var Entity = Class.extend({
 
 			if(this.path.length > 0){
 
-				var currentTile = this.requestTile(this.x,this.y);
-
 				var nextTile = this.path[0];
-
-				if(currentTile[0] == this.path[0][0] && currentTile[1] == this.path[0][1]){ // If we have reached the next place in the path then remove one slot
-					this.path.shift();
-				}
-
-				console.log(this.path)
 
 				var x = this.x;
 				var y = this.y;
+
+				var nextPosition = this.requestGridPositionByTile(nextTile);
 					
-				if(currentTile[0] < nextTile[0]){ // Move right
+				if(this.x < nextPosition[0]){ // Move right
 					this.x+= this.speed;
-				}else if(currentTile[0] > nextTile[0]){
+				}else if(nextPosition[0] < this.x){
 					this.x-= this.speed;
 				}
 
-				if(currentTile[1] < nextTile[1]){ // Move Down
+				if(this.y < nextPosition[1]){ // Move Down
 					this.y+= this.speed;
-				}else if(currentTile[1] > nextTile[1]){
+				}else if(nextPosition[1] < this.y){
 					this.y-= this.speed;
 				}
 
 				this.targetAngle = getDirectionAngle(x,y,this.x,this.y);
 
 				this.sprite.update(this.x,this.y);
+
+				console.log(this.x,this.y,nextPosition[0],nextPosition[1]);
+
+				if(this.x == nextPosition[0] && this.y == nextPosition[1]){
+					this.path.shift();
+				}
 
 			}
 
@@ -104,6 +106,18 @@ var Entity = Class.extend({
     	this.check_collision_with_camera_border_callback = callback;
     },
 
+    onRequestGridPositionByTile : function(callback){
+    	this.request_grid_position_by_tile = callback;
+    },
+
+    requestGridPositionByTile : function(tile){
+    	if(this.request_grid_position_by_tile){
+    		return this.request_grid_position_by_tile(tile);
+    	}else{
+    		return {x:0,y:0};
+    	}
+    },
+
     checkCollisionWithCameraBorder : function(delta){
     	if(this.check_collision_with_camera_border_callback){
     		this.check_collision_with_camera_border_callback(delta);
@@ -111,7 +125,6 @@ var Entity = Class.extend({
     },
 
     render : function(){
-    	console.log(this.x,this.y);
 		this.sprite.render();
 	},
 

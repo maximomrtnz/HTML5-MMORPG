@@ -14,3 +14,16 @@ function getDirectionAngle(startX,startY,nextX,nextY) {
     }
 
 }
+
+
+function xy2Tile(x,y,tilewidth){
+	return [Math.floor(x/tilewidth),Math.floor(y/tilewidth)];
+}
+
+function xy2GridPosition(x,y,tilewidth){
+	return [Math.floor(x/tilewidth)*tilewidth,Math.floor(y/tilewidth)*tilewidth];
+}
+
+function tile2GridPosition(row,col, tilewidth){
+	return [tilewidth*row,tilewidth*col];
+}

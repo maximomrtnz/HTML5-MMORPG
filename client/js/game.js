@@ -50,7 +50,7 @@ var Game = Class.extend({
 		
 		})
 
-		this.player = new Player(100,100,new Sprite(this.contextEntities,assetManager.getAsset('img/leatherarmor.png'),100,100,32,32,4),2);	
+		this.player = new Player(0,0,new Sprite(this.contextEntities,assetManager.getAsset('img/leatherarmor.png'),0,0,32,32,4),4);	
 
 		this.player.onRequestPath(function(x,y){
 
@@ -66,9 +66,7 @@ var Game = Class.extend({
 
 		this.player.onRequestTile(function(x,y){
 			
-			var tileSize = self.map.data.tilewidth;
-
-			return [Math.floor(x/tileSize),Math.floor(y/tileSize)];
+			return xy2Tile(x,y,self.map.data.tilewidth);
 
 		});
 
@@ -89,6 +87,10 @@ var Game = Class.extend({
 			
 			}
 
+		});
+
+		this.player.onRequestGridPositionByTile(function(tile){
+			return tile2GridPosition(tile[0],tile[1],self.map.data.tilewidth);
 		});
 
 	},
@@ -161,7 +163,9 @@ var Game = Class.extend({
 		var x = evt.clientX - rect.left;
 		var y = evt.clientY - rect.top;
 
-		this.player.moveTo(x,y);
+		var gridPosition = xy2GridPosition(x,y,this.map.data.tilewidth);
+
+		this.player.moveTo(gridPosition[0],gridPosition[1]);
 
 	}
 
